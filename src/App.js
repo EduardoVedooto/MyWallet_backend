@@ -15,8 +15,9 @@ app.get("/finances", async (req, res) => {
 app.post("/finances", async (req, res) => {
     const validation = financesSchema(req.body);
     if (validation.error) return res.status(400).send(validation.error.details[0].message);
+    console.log(req.body, req.query);
 
-    const price = req.body.price;
+    const value = req.body.value;
     const description = req.body.description.split(" ").filter(w => w).join(" ");
     const type = req.query.type;
 
@@ -24,9 +25,9 @@ app.post("/finances", async (req, res) => {
 
     await connection.query(`
         INSERT INTO finances
-        (description, price, type, date)
+        (description, value, type, date)
         VALUES ($1,$2,$3,NOW())
-    `, [description, price, type]);
+    `, [description, value * 100, type]);
     res.sendStatus(201);
 
 });
