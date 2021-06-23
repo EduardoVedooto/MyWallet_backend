@@ -2,6 +2,9 @@ import express from "express";
 import cors from "cors";
 import connection from "./database/Database.js";
 import financesSchema from "./schema/finances.schema.js";
+import usersSchema from "./schema/users.schema.js";
+import userSanitization from "./sanitization/users.js";
+import bcrypt from "bcrypt";
 
 const app = express();
 app.use(cors());
@@ -30,6 +33,23 @@ app.post("/finances", async (req, res) => {
     `, [description, value * 100, type]);
     res.sendStatus(201);
 
+});
+
+app.post("/users", async (req, res) => {
+
+    const validation = usersSchema(req.body);
+    if (validation.error) return res.status(400).send(validation.error.details[0]);
+
+    const user = userSanitization(req.body);
+    const { name, email, password } = user;
+
+    await connection.query(`
+        INSERT INTO users
+        (name, email, password)
+        VALUES ($1,$2,$3);
+    `, [name, email, bcrypt.hashSync(password, 10)]);
+
+    res.sendStatus(201);
 });
 
 app.listen(4000, () => console.info("Server running on port 4000..."));
