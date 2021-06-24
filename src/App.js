@@ -117,4 +117,11 @@ app.post("/signin", async (req, res) => {
   }
 });
 
+app.delete("/logout/:id", async (req, res) => {
+  const id = req.params?.id;
+  if (!id || isNaN(id)) return res.sendStatus(400);
+  await connection.query(`DELETE FROM sessions WHERE "userId" = $1`, [id]);
+  res.sendStatus(200);
+});
+
 app.listen(4000, () => console.info("Server running on port 4000..."));
