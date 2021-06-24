@@ -12,13 +12,18 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/finances", async (req, res) => {
-  console.log(req.headers);
   const token = req.header("authorization")?.replace("Bearer ", "");
   if (!token) return res.sendStatus(401);
 
   try {
 
     const result = await connection.query(`
+      SELECT * FROM sessions WHERE token = $1;
+    `, [token]);
+
+    if (!result.rowCount) return res.status(401).send("Token inexistente");
+
+    const finances = await connection.query(`
       SELECT finances.*
       FROM sessions
       JOIN finances
@@ -26,9 +31,7 @@ app.get("/finances", async (req, res) => {
       WHERE token = $1
     `, [token]);
 
-    if (!result.rows[0]) return res.sendStatus(401);
-
-    return res.status(200).send(result.rows);
+    return res.status(200).send(finances.rows);
 
   } catch (e) {
     console.error(e);
