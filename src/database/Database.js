@@ -7,7 +7,7 @@ const connection = new Pool({
     password: '123456',
     host: 'localhost',
     port: 5432,
-    database: 'mywallet'
+    database: process.env.NODE_ENV === 'test' ? 'mywallet_test' : 'mywallet',
 });
 
 export default connection;

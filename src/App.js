@@ -13,7 +13,8 @@ app.use(express.json());
 
 app.get("/finances", async (req, res) => {
   const token = req.header("authorization")?.replace("Bearer ", "");
-  if (!token) return res.sendStatus(401);
+
+  if (!token || !token.trim().length) return res.sendStatus(401);
 
   try {
 
@@ -21,7 +22,7 @@ app.get("/finances", async (req, res) => {
       SELECT * FROM sessions WHERE token = $1;
     `, [token]);
 
-    if (!result.rowCount) return res.status(401).send("Token inexistente");
+    if (!result.rowCount) return res.status(401).send("Token doesn't match with any valid token on database");
 
     const finances = await connection.query(`
       SELECT finances.*
@@ -49,13 +50,12 @@ app.post("/finances/:id", async (req, res) => {
   const type = req.query.type;
   const id = req.params.id;
 
-
-  if (type !== "income" && type !== "outgo") return res.status(400).send("Type incorrect.");
+  if (type !== "income" && type !== "outgo") return res.status(400).send("Invalid type");
 
   try {
 
     const user = await connection.query("SELECT id FROM users WHERE id = $1", [id]);
-    if (!user.rowCount) return res.status(401).send("ID de usuário inexistente");
+    if (!user.rowCount) return res.status(401).send("ID doesn't match with any valid user ID");
 
     await connection.query(`
       INSERT INTO finances
@@ -79,6 +79,12 @@ app.post("/users", async (req, res) => {
   const { name, email, password } = user;
 
   try {
+    const result = await connection.query(`
+      SELECT * FROM users WHERE email = $1;
+    `, [email])
+
+    if (result.rowCount) return res.status(401).send("E-mail already registered");
+
     await connection.query(`
       INSERT INTO users
       (name, email, password)
@@ -127,4 +133,4 @@ app.delete("/logout/:id", async (req, res) => {
   res.sendStatus(200);
 });
 
-app.listen(4000, () => console.info("Server running on port 4000..."));
+export default app;
