@@ -1,3 +1,3 @@
 import app from "./App.js";
 
-app.listen(4000, () => console.info("Server running on port 4000..."));
+app.listen(process.env.PORT, () => console.info(`Server running on port ${process.env.PORT}`));
