@@ -1,23 +1,22 @@
-import express from "express";
-import cors from "cors";
-import connection from "./database/Database.js";
-import financesSchema from "./schema/finances.schema.js";
-import usersSchema from "./schema/users.schema.js";
-import userSanitization from "./sanitization/users.js";
-import bcrypt from "bcrypt";
-import { v4 as uuid } from "uuid";
+import express from 'express';
+import cors from 'cors';
+import bcrypt from 'bcrypt';
+import { v4 as uuid } from 'uuid';
+import connection from './database/database.js';
+import financesSchema from './schema/finances.schema.js';
+import usersSchema from './schema/users.schema.js';
+import userSanitization from './sanitization/users.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get("/finances", async (req, res) => {
-  const token = req.header("authorization")?.replace("Bearer ", "");
+app.get('/finances', async (req, res) => {
+  const token = req.header('authorization')?.replace('Bearer ', '');
 
   if (!token || !token.trim().length) return res.sendStatus(401);
 
   try {
-
     const result = await connection.query(`
       SELECT * FROM sessions WHERE token = $1;
     `, [token]);
@@ -33,28 +32,25 @@ app.get("/finances", async (req, res) => {
     `, [token]);
 
     return res.status(200).send(finances.rows);
-
   } catch (e) {
     console.error(e);
-    res.sendStatus(500);
+    return res.sendStatus(500);
   }
-
 });
 
-app.post("/finances/:id", async (req, res) => {
+app.post('/finances/:id', async (req, res) => {
   const validation = financesSchema(req.body);
   if (validation.error) return res.status(400).send(validation.error.details[0].message);
 
-  const value = req.body.value;
-  const description = req.body.description.split(" ").filter(w => w).join(" ");
-  const type = req.query.type;
-  const id = req.params.id;
+  const { value } = req.body;
+  const description = req.body.description.split(' ').filter((w) => w).join(' ');
+  const { type } = req.query;
+  const { id } = req.params;
 
-  if (type !== "income" && type !== "outgo") return res.status(400).send("Invalid type");
+  if (type !== 'income' && type !== 'outgo') return res.status(400).send('Invalid type');
 
   try {
-
-    const user = await connection.query("SELECT id FROM users WHERE id = $1", [id]);
+    const user = await connection.query('SELECT id FROM users WHERE id = $1', [id]);
     if (!user.rowCount) return res.status(401).send("ID doesn't match with any valid user ID");
 
     await connection.query(`
@@ -62,16 +58,14 @@ app.post("/finances/:id", async (req, res) => {
       (description, value, type, "userId", date)
       VALUES ($1,$2,$3,$4,NOW())
     `, [description, value * 100, type, id]);
-    res.sendStatus(201);
+    return res.sendStatus(201);
   } catch (e) {
     console.error(e);
-    res.sendStatus(500);
+    return res.sendStatus(500);
   }
-
 });
 
-app.post("/users", async (req, res) => {
-
+app.post('/users', async (req, res) => {
   const validation = usersSchema(req.body);
   if (validation.error) return res.status(400).send(validation.error.details[0]);
 
@@ -81,27 +75,26 @@ app.post("/users", async (req, res) => {
   try {
     const result = await connection.query(`
       SELECT * FROM users WHERE email = $1;
-    `, [email])
+    `, [email]);
 
-    if (result.rowCount) return res.status(401).send("E-mail already registered");
+    if (result.rowCount) return res.status(401).send('E-mail already registered');
 
     await connection.query(`
       INSERT INTO users
       (name, email, password)
       VALUES ($1,$2,$3);
     `, [name, email, bcrypt.hashSync(password, 10)]);
-    res.sendStatus(201);
+    return res.sendStatus(201);
   } catch (e) {
     console.error(e);
-    res.sendStatus(500);
+    return res.sendStatus(500);
   }
 });
 
-app.post("/signin", async (req, res) => {
+app.post('/signin', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-
     const result = await connection.query(`
       SELECT * FROM users WHERE email = $1    
     `, [email]);
@@ -116,21 +109,19 @@ app.post("/signin", async (req, res) => {
       `, [user.id, token]);
 
       return res.status(200).send({ user, token });
-    } else {
-      return res.status(401).send("Email ou senha inválidos");
     }
-
+    return res.status(401).send('Email ou senha inválidos');
   } catch (e) {
     console.error(e);
-    res.sendStatus(500);
+    return res.sendStatus(500);
   }
 });
 
-app.delete("/logout/:id", async (req, res) => {
+app.delete('/logout/:id', async (req, res) => {
   const id = req.params?.id;
-  if (!id || isNaN(id)) return res.sendStatus(400);
-  await connection.query(`DELETE FROM sessions WHERE "userId" = $1`, [id]);
-  res.sendStatus(200);
+  if (!id || Number.isNaN(id)) return res.sendStatus(400);
+  await connection.query('DELETE FROM sessions WHERE "userId" = $1', [id]);
+  return res.sendStatus(200);
 });
 
 export default app;

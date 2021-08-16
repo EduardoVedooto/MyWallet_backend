@@ -1,5 +1,5 @@
-import "./setup.js";
-import app from "./app.js";
+import './setup.js';
+import app from './app.js';
 
 const port = process.env.PORT || 4000;
 
